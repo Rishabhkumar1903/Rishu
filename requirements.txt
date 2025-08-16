@@ -1,6 +1,6 @@
 joblib
 scikit-learn
 streamlit
-pandas
 gdown
+pandas
 os
