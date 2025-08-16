@@ -1,72 +1,51 @@
 import streamlit as st
 import joblib
+import os
+import gdown
 import requests
-import base64
 from PIL import Image
 from io import BytesIO
 import concurrent.futures
-import os
 
-# ----------------- Function to Download from Google Drive -----------------
-def download_file_from_google_drive(file_id, destination):
-    URL = "https://docs.google.com/uc?export=download"
-    session = requests.Session()
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = get_confirm_token(response)
-
-    if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
-
-    save_response_content(response, destination)
-
-def get_confirm_token(response):
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
-
-def save_response_content(response, destination):
-    CHUNK_SIZE = 32768
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
-
-# -------------------- Load Data --------------------
+# -------------------- File Setup --------------------
 df_file = "movie_df3.pkl"
 model_file = "movie_model3.pkl"
 vector_file = "movie_vector3.pkl"
 
-# Google Drive IDs
-file_id_df = "1Fsnq_uAzo0gHDGMoJ4I73IPblDlKho3R"                # apna file_id for movie_df.pkl
-file_id_model = "140P1HWAolN9RHySXQuD_18Fqmd0qf343"             # apna file_id for model.pkl
-file_id_vector = "1v1lihvHiA8KRyzNKT_f7wXBzqKnS2jTB"           # apna file_id for movie_vector.pkl
+# Google Drive IDs (make sure your files are shared as "Anyone with link - Viewer")
+file_id_df = "1Fsnq_uAzo0gHDGMoJ4I73IPblDlKho3R"
+file_id_model = "140P1HWAolN9RHySXQuD_18Fqmd0qf343"
+file_id_vector = "1v1lihvHiA8KRyzNKT_f7wXBzqKnS2jTB"
+
+def download_file(file_id, output):
+    url = f"https://drive.google.com/uc?id={file_id}"
+    gdown.download(url, output, quiet=False, fuzzy=True)
 
 # Download if not exists
 if not os.path.exists(df_file):
-    download_file_from_google_drive(file_id_df, df_file)
+    download_file(file_id_df, df_file)
 
 if not os.path.exists(model_file):
-    download_file_from_google_drive(file_id_model, model_file)
+    download_file(file_id_model, model_file)
 
 if not os.path.exists(vector_file):
-    download_file_from_google_drive(file_id_vector, vector_file)
+    download_file(file_id_vector, vector_file)
 
 # Load files
 df = joblib.load(df_file)
 model = joblib.load(model_file)
 vectors = joblib.load(vector_file)
 
+
 # -------------------- Movie Recommendation --------------------
 def run_movie_recommendation():
     st.markdown("""
-        <div style=text-align:center;">
+        <div style="text-align:center;">
             <h1 style="color:burlywood;">MOVIE RECOMMENDATION</h1>
         </div>
     """, unsafe_allow_html=True)
 
-    # -------------------- Custom CSS for Staggered Fade-in --------------------
+    # -------------------- Custom CSS Animation --------------------
     st.markdown("""
         <style>
         @keyframes fadeIn {
@@ -77,7 +56,6 @@ def run_movie_recommendation():
             animation: fadeIn 1s ease-in-out forwards;
             opacity: 0;
         }
-        /* Delay for each poster */
         .fade-in:nth-child(1) { animation-delay: 0.1s; }
         .fade-in:nth-child(2) { animation-delay: 0.3s; }
         .fade-in:nth-child(3) { animation-delay: 0.5s; }
@@ -86,7 +64,7 @@ def run_movie_recommendation():
         </style>
     """, unsafe_allow_html=True)
 
-    # -------------------- Poster & Rating Fetch Function --------------------
+    # -------------------- Fetch Poster & Rating --------------------
     def get_poster_and_rating(movie_id):
         try:
             data = requests.get(f"http://www.omdbapi.com/?i={movie_id}&apikey=a8f8711e", timeout=5).json()
@@ -103,7 +81,6 @@ def run_movie_recommendation():
         except:
             return None
 
-    # -------------------- Parallel Poster & Rating Fetch --------------------
     def fetch_posters_and_ratings_parallel(movie_ids):
         with concurrent.futures.ThreadPoolExecutor() as executor:
             return list(executor.map(get_poster_and_rating, movie_ids))
@@ -131,7 +108,7 @@ def run_movie_recommendation():
                 if len(valid_movies) == 5:
                     break
 
-            # Display
+            # Display Recommendations
             cols = st.columns(len(valid_movies))
             for idx, (name, poster, rating) in enumerate(valid_movies):
                 with cols[idx]:
@@ -156,3 +133,8 @@ def run_movie_recommendation():
                 st.warning("No valid posters found for recommendations.")
         else:
             st.error("Movie not found, please select a different movie")
+
+
+# -------------------- Run App --------------------
+if __name__ == "__main__":
+    run_movie_recommendation()
