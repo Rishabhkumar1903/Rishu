@@ -40,7 +40,7 @@ with st.sidebar:
         st.sidebar.text("📞8809972414")
         st.sidebar.text("✉️rishabhverma190388099@gmail.com")
 
-        st.sidebar.text("We are a group of ML engineers working on food sentiment")
+        st.sidebar.text("We are a group of ML engineers working on Machine Learning Projects")
 
 
 # ---------- Import Project Functions ----------
@@ -80,5 +80,6 @@ elif selected_tab == "📩 Spam Detection":
 
 elif selected_tab == "🌐 English-Hindi Classifier":
     run_language_classifier()
+
 
 
